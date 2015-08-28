@@ -14,7 +14,6 @@ import edu.usc.ict.vhmsg.VHMsg;
 public class MyRecord implements MessageListener {
 
 	private VHMsg vhmsgSubscriber;
-
 	AudioFormat af = null;
 	TargetDataLine td = null;
 	SourceDataLine sd = null;
@@ -23,8 +22,9 @@ public class MyRecord implements MessageListener {
 	AudioInputStream ais = null;
 	Boolean stopflag = false;
 	public static String path_to_ffmpeg = "/usr/local/bin/ffmpeg";
+	private String s;
 
-	public MyRecord() {
+	public MyRecord(String name) throws InterruptedException {
 		System.setProperty("VHMSG_SERVER", Config.VHMSG_SERVER_URL);
 		System.out.println("VHMSG_SERVER: "
 				+ System.getProperty("VHMSG_SERVER"));
@@ -35,10 +35,11 @@ public class MyRecord implements MessageListener {
 		vhmsgSubscriber.addMessageListener(this);
 		vhmsgSubscriber.subscribeMessage("vrCamera");
 		System.out.println("VHMsg started");
+		s = name;
 		capture();
 	}
 
-	public void capture() {
+	public void capture() throws InterruptedException {
 		try {
 			af = getAudioFormat();
 			DataLine.Info info = new DataLine.Info(TargetDataLine.class, af);
@@ -46,14 +47,45 @@ public class MyRecord implements MessageListener {
 			td.open(af);
 			td.start();
 
-			Record record = new Record();
-			Thread t1 = new Thread(record);
+//			Record record = new Record();
+//			Thread t1 = new Thread(record);
 		    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
 		    Date now = new Date();
 		    String strDate = sdfDate.format(now);
-		    System.out.println("audio s: "+strDate);
-			t1.start();
-
+		    System.out.println("audio start: "+strDate);
+//			t1.start();
+		    byte bts[] = new byte[10000];
+		    baos = new ByteArrayOutputStream();
+			try {
+				System.out.println("open audio record");
+				stopflag = false;
+				while (stopflag != true) {
+					int cnt = td.read(bts, 0, bts.length);
+					if (cnt > 0) {
+						baos.write(bts, 0, cnt);
+					}
+				}
+			     sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+			     now = new Date();
+			     strDate = sdfDate.format(now);
+			    System.out.println("audio end: "+strDate);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					if (baos != null) {
+						baos.close();
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				} finally {
+					td.drain();
+					td.close();
+				}
+			}
+			System.out.println("saving audio....");
+			save();
+			System.out.println("audio saved....");
 		} catch (LineUnavailableException ex) {
 			ex.printStackTrace();
 			return;
@@ -69,9 +101,8 @@ public class MyRecord implements MessageListener {
 				/ af.getFrameSize());
 		File file = null;
 		try {
-			File filePath = new File(
-					"/Users/Vivi/Documents/workspace/InMind_vcCamera");
-			file = new File(filePath.getPath() + "/" + "audio.mp3");
+			File filePath = new File("/Users/Vivi/Documents/workspace/InMind_vcCamera");
+			file = new File(filePath.getPath() + "/" + s +".mp3");
 			AudioSystem.write(ais, AudioFileFormat.Type.WAVE, file);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -91,64 +122,49 @@ public class MyRecord implements MessageListener {
 	}
 
 	public AudioFormat getAudioFormat() {
-//		AudioFormat.Encoding encoding = AudioFormat.Encoding.PCM_SIGNED;
-//		float rate = 8000f;
-//		int sampleSize = 16;
-//		String signedString = "signed";
-//		boolean bigEndian = true;
-//		int channels = 1;
-//		return new AudioFormat(encoding, rate, sampleSize, channels,
-//				(sampleSize / 8) * channels, rate, bigEndian);
-      //采样率是每秒播放和录制的样本数  
       float sampleRate = 16000.0F;  
-      // 采样率8000,11025,16000,22050,44100  
-      //sampleSizeInBits表示每个具有此格式的声音样本中的位数  
       int sampleSizeInBits = 16;  
-      // 8,16  
       int channels = 1;  
-      // 单声道为1，立体声为2  
       boolean signed = true;  
-      // true,false  
       boolean bigEndian = true;  
-      // true,false  
       return new AudioFormat(sampleRate, sampleSizeInBits, channels, signed,bigEndian);  
 	}
 
-	class Record implements Runnable {
-		byte bts[] = new byte[10000];
-
-		public void run() {
-			baos = new ByteArrayOutputStream();
-			try {
-				System.out.println("open audio record");
-				stopflag = false;
-				while (stopflag != true) {
-					int cnt = td.read(bts, 0, bts.length);
-					if (cnt > 0) {
-						baos.write(bts, 0, cnt);
-					}
-				}
-			    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-			    Date now = new Date();
-			    String strDate = sdfDate.format(now);
-			    System.out.println("audio end: "+strDate);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					if (baos != null) {
-						baos.close();
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				} finally {
-					td.drain();
-					td.close();
-				}
-			}
-			System.out.println("saving audio....");
-			save();
-			System.out.println("audio saved....");
+//	class Record implements Runnable {
+//		byte bts[] = new byte[10000];
+//
+//		public void run() {
+//			baos = new ByteArrayOutputStream();
+//			try {
+//				System.out.println("open audio record");
+//				stopflag = false;
+//				while (stopflag != true) {
+//					int cnt = td.read(bts, 0, bts.length);
+//					if (cnt > 0) {
+//						baos.write(bts, 0, cnt);
+//					}
+//				}
+//			    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+//			    Date now = new Date();
+//			    String strDate = sdfDate.format(now);
+//			    System.out.println("audio end: "+strDate);
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			} finally {
+//				try {
+//					if (baos != null) {
+//						baos.close();
+//					}
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				} finally {
+//					td.drain();
+//					td.close();
+//				}
+//			}
+//			System.out.println("saving audio....");
+//			save();
+//			System.out.println("audio saved....");
 //			Runtime rt = Runtime.getRuntime();
 //			try {
 //				System.out.println("Reproducing mp4....");
@@ -166,8 +182,8 @@ public class MyRecord implements MessageListener {
 //				// TODO Auto-generated catch block
 //				e1.printStackTrace();
 //			}
-		}
-	}
+//		}
+//	}
 
 	@Override
 	public void messageAction(MessageEvent e) {

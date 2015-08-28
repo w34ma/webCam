@@ -14,8 +14,10 @@ public class vcCameraMain implements MessageListener {
 	private VHMsg vhmsgSubscriber;
 	static volatile open_vcCamera cur_camera;
 	static volatile MyRecord mr;
+	static volatile boolean f = false;
+
 	private Thread t1;
-	private Thread t2;
+//	private Thread t2;
 	public static String path_to_ffmpeg = "/usr/local/bin/ffmpeg";
 
 	public vcCameraMain() {
@@ -42,35 +44,35 @@ public class vcCameraMain implements MessageListener {
 				public void run() {
 					System.out.println("new camera thread");
 					try {
-						cur_camera = new open_vcCamera();
+						cur_camera = new open_vcCamera(f);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
 			};
-			t2 = new Thread() {
-				public void run() {
-					System.out.println("new audio thread");
-					try {
-						mr = new MyRecord();
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			};
+//			t2 = new Thread() {
+//				public void run() {
+//					System.out.println("new audio thread");
+//					try {
+//						mr = new MyRecord();
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				}
+//			};
 		    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
 		    Date now = new Date();
 		    String strDate = sdfDate.format(now);
-		    System.out.println("start: "+strDate);
+		    System.out.println("start t1: "+strDate);
 			t1.start();
-			t2.start();
+//		    System.out.println("start t2: "+strDate);
+//			t2.start();
 		} 
 //		else if (tokens[0].equals("vcCamera") && tokens[1].equals("end")) {
 //			System.out.println("end camera1 & 2");
 //			// cur_camera.setflag(false);
-//			System.out.println("oh no");
 //			// t.stop();
 //		}
 	}

@@ -18,14 +18,14 @@ import edu.usc.ict.vhmsg.MessageEvent;
 import edu.usc.ict.vhmsg.MessageListener;
 import edu.usc.ict.vhmsg.VHMsg;
 
-public class open_vcCamera implements MessageListener{
+public class open_vcCamera implements MessageListener {
 	private volatile boolean flag = true;
 	private FrameRecorder recorder1;
 	private VHMsg vhmsgSubscriber;
 	public static String path_to_ffmpeg = "/usr/local/bin/ffmpeg";
+	private String s;
 
-
-	public open_vcCamera() throws Exception{
+	public open_vcCamera(boolean f) throws Exception {
 		System.setProperty("VHMSG_SERVER", Config.VHMSG_SERVER_URL);
 		System.out.println("VHMSG_SERVER: "
 				+ System.getProperty("VHMSG_SERVER"));
@@ -36,46 +36,72 @@ public class open_vcCamera implements MessageListener{
 		vhmsgSubscriber.addMessageListener(this);
 		vhmsgSubscriber.subscribeMessage("vrCamera");
 		System.out.println("VHMsg started");
-		
-		System.out.print("open camera");
-		CvCapture capture1 = cvCreateCameraCapture(0); //CV_CAP_ANY = -1 USBCam = 0
-		cvSetCaptureProperty(capture1,CV_CAP_PROP_FRAME_WIDTH,640);
-		cvSetCaptureProperty(capture1,CV_CAP_PROP_FRAME_HEIGHT,480);
 
-		cvNamedWindow("LiveVid",CV_WINDOW_AUTOSIZE);
-		recorder1 = new OpenCVFrameRecorder("RecordVid.avi",640,480);
-		recorder1.setVideoCodec(CV_FOURCC('M','J','P','G'));
+		System.out.print("open camera");
+		CvCapture capture1 = cvCreateCameraCapture(0); // CV_CAP_ANY = -1 USBCam
+														// = 0
+		cvSetCaptureProperty(capture1, CV_CAP_PROP_FRAME_WIDTH, 640);
+		cvSetCaptureProperty(capture1, CV_CAP_PROP_FRAME_HEIGHT, 480);
+
+		cvNamedWindow("LiveVid", CV_WINDOW_AUTOSIZE);
+		SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");// dd/MM/yyyy
+		Date now = new Date();
+		String strDate = sdfDate.format(now);
+		String name = strDate + ".avi";
+		recorder1 = new OpenCVFrameRecorder(strDate + ".avi", 640, 480);
+		s = strDate;
+		recorder1.setVideoCodec(CV_FOURCC('M', 'J', 'P', 'G'));
 		recorder1.setFrameRate(30);
 		recorder1.setPixelFormat(1);
-	    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-	    Date now = new Date();
-	    String strDate = sdfDate.format(now);
-	    System.out.println("vedio start: "+strDate);
+		// SimpleDateFormat sdfDate1 = new
+		// SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+		// Date now1 = new Date();
+		// String strDate1 = sdfDate.format(now1);
+		// System.out.println("video start: "+strDate1);
 		recorder1.start();
-		
+
+		Thread t2 = new Thread() {
+			public void run() {
+				System.out.println("new audio thread");
+				try {
+					MyRecord mr = new MyRecord(s);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		};
+		System.out.println("audio fired by vedio: " + strDate);
+		t2.start();
 		IplImage img1;
-		
-		while (flag){
+
+		while (flag) {
 			img1 = cvQueryFrame(capture1);
-			if(img1 == null) break;
-			cvShowImage("LiveVid",img1);
+			if (img1 == null)
+				break;
+			cvShowImage("LiveVid", img1);
 			recorder1.record(img1);
-//			char c = (char) cvWaitKey(15);
-//			if(c == 'q') break;
 		}
-		
+
 		recorder1.stop();
-	    sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
-	     now = new Date();
-	     strDate = sdfDate.format(now);
-	    System.out.println("vedio end: "+strDate);
+		// sdfDate1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+		// now1 = new Date();
+		// strDate1 = sdfDate.format(now);
+		// System.out.println("video end: "+strDate);
 		cvDestroyWindow("LiveVid");
 		cvReleaseCapture(capture1);
-		Runtime rt = Runtime.getRuntime();
-		System.out.println("Reproducing mp4....");
-		Process pr1 = rt.exec("cd /Users/Vivi/Documents/workspace/InMind_vcCamera");
-		Process pr2 = rt.exec(path_to_ffmpeg + " -i RecordVid.avi -c:v libx264 -preset slow -crf 19 -c:a libvo_aacenc -b:a 128k new_output.mp4");
-		System.out.println("end vedio");
+//		Runtime rt = Runtime.getRuntime();
+//		System.out.println("Reproducing mp4....");
+//		Process pr1 = rt
+//				.exec("cd /Users/Vivi/Documents/workspace/InMind_vcCamera");
+//		System.out.println(name);
+//		Process pr2 = rt
+//				.exec(path_to_ffmpeg
+//						+ " -i "
+//						+ name
+//						+ " -c:v libx264 -preset slow -crf 19 -c:a libvo_aacenc -b:a 128k"
+//						+ s + ".mp4");
+//		System.out.println("end vedio");
 	}
 
 	@Override
@@ -83,7 +109,7 @@ public class open_vcCamera implements MessageListener{
 		// TODO Auto-generated method stub
 		System.out.println(e);
 		String[] tokens = e.toString().split(" ");
-		 if (tokens[0].equals("vrCamera") && tokens[1].equals("end")) {
+		if (tokens[0].equals("vrCamera") && tokens[1].equals("end")) {
 			flag = false;
 		}
 	}
